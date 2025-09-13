@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Backend",
+      "type": "shell",
+      "command": "powershell",
+      "args": ["-ExecutionPolicy", "ByPass", "-File", "scripts/run-backend.ps1"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Frontend",
+      "type": "shell",
+      "command": "powershell",
+      "args": ["-ExecutionPolicy", "ByPass", "-File", "scripts/run-frontend.ps1"],
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}
