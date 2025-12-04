@@ -9,6 +9,7 @@ class Settings(BaseModel):
     openrouter_api_key: str | None = os.getenv("OPENROUTER_API_KEY")
     openrouter_model: str = os.getenv("OPENROUTER_MODEL", "openrouter/auto")
     allowed_origins: str = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
+    share_secret_key: str = os.getenv("SHARE_SECRET_KEY", "change-me-in-production")
 
 
 @lru_cache

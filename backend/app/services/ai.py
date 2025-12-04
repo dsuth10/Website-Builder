@@ -46,6 +46,15 @@ class AIClient:
             resp = await client.post(f"{self.base_url}/chat/completions", headers=headers, json=payload)
             resp.raise_for_status()
             data = resp.json()
+            
+            # Validate response structure
+            if not isinstance(data, dict) or "choices" not in data:
+                raise ValueError("Invalid API response: missing 'choices' field")
+            if not data["choices"] or not isinstance(data["choices"], list):
+                raise ValueError("Invalid API response: 'choices' is empty or not a list")
+            if "message" not in data["choices"][0] or "content" not in data["choices"][0]["message"]:
+                raise ValueError("Invalid API response: missing message content")
+            
             content = data["choices"][0]["message"]["content"].strip()
             return content
 

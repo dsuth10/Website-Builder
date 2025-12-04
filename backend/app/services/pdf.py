@@ -22,8 +22,14 @@ def html_to_pdf_bytes(html_body: str, title: str) -> bytes:
     </html>
     """
     out = BytesIO()
-    pisa_status = pisa.CreatePDF(src=html, dest=out)
-    if pisa_status.err:
-        raise RuntimeError("Failed to generate PDF")
-    return out.getvalue()
+    try:
+        pisa_status = pisa.CreatePDF(src=html, dest=out)
+        if pisa_status.err:
+            error_msg = f"PDF generation failed: {pisa_status.err}"
+            raise RuntimeError(error_msg)
+        return out.getvalue()
+    except Exception as e:
+        if isinstance(e, RuntimeError):
+            raise
+        raise RuntimeError(f"PDF generation error: {str(e)}") from e
 
