@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { generateContent, listItems, getItem, publishVersion, getVersionHtmlUrl, getVersionPdfUrl, getItemExportUrl, importContent } from './api'
 
 function GenerateForm({ onGenerated }) {

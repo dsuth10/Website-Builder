@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 from sqlmodel import Field, SQLModel
@@ -15,7 +15,7 @@ class ContentItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str
     slug: str = Field(index=True, unique=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Relationship removed; queries use explicit joins/selects
 
@@ -30,7 +30,7 @@ class ContentVersion(SQLModel, table=True):
     genre: Optional[str] = None
     topic: Optional[str] = None
     body_html: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     published_at: Optional[datetime] = None
 
     # Relationship removed; use item_id for joins

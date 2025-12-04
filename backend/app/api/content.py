@@ -42,15 +42,22 @@ def to_version_out(v: ContentVersion) -> VersionOut:
 
 @router.post("/generate", response_model=ItemOut)
 async def generate_content(payload: GenerateRequest, session: AsyncSession = Depends(get_session)):
+    # Validate topic is provided and not empty
+    topic = payload.topic.strip() if payload.topic else ""
+    if not topic:
+        raise HTTPException(400, "Topic is required")
+    
     # derive title when blank
     title = (payload.title or "").strip()
     if not title:
-        title = payload.topic.strip()
+        title = topic
 
     # slug by normalized title
     slug = (
         title.lower().strip().replace(" ", "-").replace("/", "-").replace("_", "-")
     )
+    if not slug:
+        raise HTTPException(400, "Generated slug is empty")
 
     # ensure item exists
     result = await session.execute(select(ContentItem).where(ContentItem.slug == slug))
@@ -169,9 +176,9 @@ async def publish_version(item_id: int, version_id: int, session: AsyncSession =
         pv.status = VersionStatus.archived
 
     version.status = VersionStatus.published
-    from datetime import datetime
+    from datetime import datetime, timezone
 
-    version.published_at = datetime.utcnow()
+    version.published_at = datetime.now(timezone.utc)
     await session.commit()
     await session.refresh(version)
     return to_version_out(version)
@@ -208,13 +215,23 @@ async def get_version_pdf(item_id: int, version_id: int, session: AsyncSession =
 @router.get("/share/{token}")
 async def share_view(token: str, session: AsyncSession = Depends(get_session)):
     # simple share link encoder: item_id:version_id
-    s = URLSafeSerializer("share-secret")
+    from ..core.config import get_settings
+    settings = get_settings()
+    s = URLSafeSerializer(settings.share_secret_key)
     try:
         payload = s.loads(token)
     except Exception:
         raise HTTPException(400, "Invalid token")
-    item_id = int(payload.get("item_id"))
-    version_id = int(payload.get("version_id"))
+    
+    # Validate payload structure
+    if not isinstance(payload, dict) or "item_id" not in payload or "version_id" not in payload:
+        raise HTTPException(400, "Invalid token payload")
+    
+    try:
+        item_id = int(payload["item_id"])
+        version_id = int(payload["version_id"])
+    except (ValueError, TypeError):
+        raise HTTPException(400, "Invalid token payload")
     version = (
         await session.execute(
             select(ContentVersion).where(ContentVersion.id == version_id, ContentVersion.item_id == item_id)
@@ -276,8 +293,14 @@ async def import_items(payload: ImportItemsIn | ImportItemIn, session: AsyncSess
 
     created = []
     for item_in in items:
-        title = item_in.title
+        title = item_in.title.strip() if item_in.title else ""
+        if not title:
+            raise HTTPException(400, "Item title is required")
+        
         slug = (item_in.slug or title).lower().strip().replace(" ", "-").replace("/", "-").replace("_", "-")
+        if not slug:
+            raise HTTPException(400, "Item slug cannot be empty")
+        
         existing = (await session.execute(select(ContentItem).where(ContentItem.slug == slug))).scalar_one_or_none()
         if not existing:
             existing = ContentItem(title=title, slug=slug)
@@ -288,6 +311,9 @@ async def import_items(payload: ImportItemsIn | ImportItemIn, session: AsyncSess
             select(func.max(ContentVersion.version)).where(ContentVersion.item_id == existing.id)
         )
         max_ver = vres.scalar() or 0
+
+        if not item_in.versions:
+            raise HTTPException(400, f"Item '{title}' must have at least one version")
 
         for vin in item_in.versions:
             ver_no = vin.version or (max_ver + 1)
